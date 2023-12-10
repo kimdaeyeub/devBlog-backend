@@ -1,12 +1,23 @@
+# REST FRMAEWORK
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnly
+from rest_framework.exceptions import NotFound, PermissionDenied
+from rest_framework.status import HTTP_204_NO_CONTENT
+
+# CUSTOM FILES
 from .serializers import PostSerializer
 from .models import Post
-from rest_framework.exceptions import NotFound
 
 
 class GetAllPosts(APIView):
+    def get(self, request):
+        posts = Post.objects.filter()
+        serializer = PostSerializer(posts, many=True)
+        return Response(serializer.data)
+
+
+class GetMyPosts(APIView):
     def get(self, request):
         posts = Post.objects.filter(creator=request.user)
         serializer = PostSerializer(posts, many=True)
@@ -19,10 +30,10 @@ class AddPost(APIView):
     def post(self, request):
         serializer = PostSerializer(data=request.data)
         if serializer.is_valid():
-            serializer = serializer.save(
+            post = serializer.save(
                 creator=request.user,
             )
-            return Response(PostSerializer(serializer).data)
+            return Response(PostSerializer(post).data)
         else:
             return Response(serializer.errors)
 
@@ -53,7 +64,14 @@ class PostDetail(APIView):
         )
 
         if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data)
+            updated_post = serializer.save()
+            return Response(PostSerializer(updated_post).data)
         else:
             return Response(serializer.errors)
+
+    def delete(self, request, pk):
+        post = self.get_object(pk)
+        if post.creator != request.user:
+            raise PermissionDenied
+        post.delete()
+        return Response(status=HTTP_204_NO_CONTENT)
