@@ -38,6 +38,8 @@ class Login(APIView):
 
 
 class GetMe(APIView):
+    permission_classes = [IsAuthenticated]
+
     def get(self, request):
         user = request.user
         if user:
@@ -45,6 +47,20 @@ class GetMe(APIView):
             return Response(serializer.data)
         else:
             return Response({"message": "Invalid credentials"})
+
+    def put(self, request):
+        user = request.user
+        serializer = PrivateUserSerializer(
+            user,
+            data=request.data,
+            partial=True,
+        )
+        if serializer.is_valid():
+            user = serializer.save()
+            serializer = PrivateUserSerializer(user)
+            return Response(serializer.data)
+        else:
+            return Response(serializer.errors)
 
 
 class LogOut(APIView):
